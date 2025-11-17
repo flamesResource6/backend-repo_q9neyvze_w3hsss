@@ -1,8 +1,10 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
 
-app = FastAPI()
+app = FastAPI(title="DigitalMol API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,13 +14,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class ContactRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=80)
+    email: EmailStr
+    company: Optional[str] = None
+    message: str = Field(..., min_length=10, max_length=2000)
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "DigitalMol API running"}
 
-@app.get("/api/hello")
-def hello():
-    return {"message": "Hello from the backend API!"}
+@app.post("/api/contact")
+def submit_contact(payload: ContactRequest):
+    """Accepts contact form submissions. In a real app, save to DB or send email."""
+    try:
+        # Here we could insert into MongoDB using the provided database helpers.
+        # For now, we just return the data back as confirmation.
+        return {"status": "ok", "received": payload.dict()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/test")
 def test_database():
@@ -63,7 +77,6 @@ def test_database():
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
-
 
 if __name__ == "__main__":
     import uvicorn
